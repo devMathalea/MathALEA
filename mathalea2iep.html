@@ -6,7 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
 
 
-	<title>MathALEA 2D</title>
+	<title>MathALEA -- Instrumenpoche</title>
 	<meta name="description" content="MathALEA 2D">
 	<meta name="author" content="Coopmaths.fr">
 
@@ -181,7 +181,7 @@
           display.removeChild(item)
         }
         var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-        svg.id = 'svg'
+        svg.id = 'svgIEP'
         var largeur = Math.max(display.offsetWidth - 20 || 0, 800)
         svg.style.width = largeur + 'px'
         svg.setAttribute('width', largeur)
@@ -193,7 +193,7 @@
         display.appendChild(svg)
         var iepApp = new iep.iepApp()
         var xmlElt = document.getElementById('xmlSrc')
-        iepApp.addDoc("svg", xmlElt.value, true)
+        iepApp.addDoc("svgIEP", xmlElt.value, true)
       } catch (error) {
         displayError("Plantage à l'affichage, xml probablement malformé")
         console.error(error)

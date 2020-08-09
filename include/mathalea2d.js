@@ -15,7 +15,10 @@
 let mesObjets = []; // Liste de tous les objets construits
 //Liste utilisée quand il n'y a qu'une seule construction sur la page web
 
-let pixelsParCm = 20
+let pixelsParCm = 20 // Coefficient de conversions utilisée pour la création des SVG
+
+let idIEP = 0 // Pour numéroter les tracés IEP
+let tempoIEP = 1 
 
 /*
 * Classe parente de tous les objets de MathALEA2D
@@ -87,10 +90,10 @@ function Point(arg1,arg2,arg3,positionLabel = 'above') {
 		return -this.y*this.coeff;
 	}
 	this.xIEP = function() {
-		return this.x*30+100;
+		return (this.x+5)*30;
 	}
 	this.yIEP = function() {
-		return -this.y*30+300;
+		return (-this.y+10)*30;
 	}
 	if (!this.nom) {
 		this.nom = ' '; // Le nom d'un point est par défaut un espace
@@ -898,12 +901,20 @@ function Segment(arg1,arg2,arg3,arg4,color){
 	this.iep = function(){
 		let A = point(this.x1,this.y1)
 		let B = point(this.x2,this.y2)
-		let codeIep = ''
-		codeIep += `<action mouvement="montrer" objet="crayon" />`
-		codeIep += `\n<action abscisse="${A.xIEP()}" ordonnee="${A.yIEP()}" mouvement="translation" objet="crayon" />`
-		codeIep += `\n<action mouvement="montrer" objet="regle" />`
-		codeIep += `\n<action abscisse="${A.xIEP()}" ordonnee="${A.yIEP()}" mouvement="translation" objet="regle" />`
-		codeIep += `\n<action abscisse="${B.xIEP()}" ordonnee="${B.yIEP()}" epaisseur="0" couleur="0" id="1" mouvement="tracer" objet="crayon" />`
+		let etapes = []
+		etapes.push(deplacerCrayon(A))
+		etapes.push(montrerRegle(A))
+		if (B.x>A.x) {
+			etapes.push(rotationRegle(droite(A,B).angleAvecHorizontale))
+		} else {
+			etapes.push(rotationRegle(180+droite(A,B).angleAvecHorizontale))
+		}
+		etapes.push(tracer(B))
+		etapes.push(masquerRegle())
+		codeIep = ''
+		for (etape of etapes){
+			code += etape.iep()
+		}
 		return codeIep
 	}
 }
@@ -1021,6 +1032,40 @@ function Polygone(...points){
 			binomeXY += `(${point.x},${point.y})--`
 		}
 		return `\\draw${optionsDraw} ${binomeXY}cycle;`
+	}
+	this.iep = function(){
+		let etapes = []
+		etapes.push(montrerRegle())
+		for (i=0 ; i<this.listePoints.length-1 ; i+=1){
+			let A = this.listePoints[i]
+			let B = this.listePoints[i+1]
+			etapes.push(deplacerRegle(A))
+			etapes.push(deplacerCrayon(A))
+			if (B.x>A.x) {
+			etapes.push(rotationRegle(droite(A,B).angleAvecHorizontale))
+			} else {
+				etapes.push(rotationRegle(180+droite(A,B).angleAvecHorizontale))
+			}
+			etapes.push(tracer(B))
+		}
+		let A = this.listePoints[this.listePoints.length-1]
+		let B = this.listePoints[0]
+		etapes.push(deplacerRegle(A))
+		etapes.push(deplacerCrayon(A))
+		if (droite(A,B).angleAvecHorizontale!==0){
+			if (B.x>A.x) {
+				etapes.push(rotationRegle(droite(A,B).angleAvecHorizontale))
+			} else {
+				etapes.push(rotationRegle(180+droite(A,B).angleAvecHorizontale))
+			}
+		}
+		etapes.push(tracer(B))
+		etapes.push(masquerRegle())
+		codeIep = ''
+		for (etape of etapes){
+			code += etape.iep()
+		}
+		return codeIep
 	}
 
 }
@@ -2802,6 +2847,178 @@ function couleurAleatoire() {
 
 /*
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%% INSTRUMENPOCHE %%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+*/
+
+/**
+* montrerRegle(A,tempo) | montrerCrayon(A,tempo) | montrerEquerre(A,tempo) | montrerCompas(A,tempo) | montrerRapporteur(A,tempo)
+* 
+* @Auteur Rémi Angot
+*/
+
+function Montrer(objet,A,tempo=tempoIEP ) {
+	ObjetMathalea2D.call(this)
+	this.iep = function() {
+		let tempoTexte = ''
+		if (tempo){
+			tempoTexte = `tempo="${tempo}"`
+		}
+		if (A) {
+			return `<action objet="${objet}" mouvement="montrer" abscisse="${A.xIEP()}" ordonnee="${A.yIEP()}" ${tempoTexte} />`
+		} else {
+			return `<action objet="${objet}" mouvement="montrer" ${tempoTexte} />`
+		}
+	} 
+}
+function montrerCrayon(A,tempo) {
+	return new Montrer('crayon',A,tempo)
+}
+function montrerRegle(A,tempo) {
+	return new Montrer('regle',A,tempo)
+}
+function montrerEquerre(A,tempo) {
+	return new Montrer('equerre',A,tempo)
+}
+function montrerCompas(A,tempo) {
+	return new Montrer('compas',A,tempo)
+}
+function montrerRapporteur(A,tempo) {
+	return new Montrer('rapporteur',A,tempo)
+}
+
+/**
+* masquerRegle(A) | masquerCrayon(A) | masquerEquerre(A) | masquerCompas(A) | masquerRapporteur(A)
+* 
+* @Auteur Rémi Angot
+*/
+
+function Masquer(objet,tempo=tempoIEP ) {
+	ObjetMathalea2D.call(this)
+	this.iep = function() {
+		let tempoTexte = ''
+		if (tempo){
+			tempoTexte = `tempo="${tempo}"`
+		}
+		return `<action objet="${objet}" mouvement="masquer" ${tempoTexte} />`
+	} 
+}
+function masquerCrayon(tempo) {
+	return new Masquer('crayon',tempo)
+}
+function masquerRegle(tempo) {
+	return new Masquer('regle',tempo)
+}
+function masquerEquerre(tempo) {
+	return new Masquer('equerre',tempo)
+}
+function masquerCompas(tempo) {
+	return new Masquer('compas',tempo)
+}
+function masquerRapporteur(tempo) {
+	return new Masquer('rapporteur',tempo)
+}
+
+/**
+* deplacerRegle(A,tempo,vitesse) | deplacerCrayon(A,tempo,vitesse) | deplacerEquerre(A,tempo,vitesse) | deplacerCompas(A,tempo,vitesse) | deplacerRapporteur(A,tempo,vitesse)
+* 
+* @Auteur Rémi Angot
+*/
+
+function Deplacer(objet,A,tempo=tempoIEP ,vitesse=10) {
+	ObjetMathalea2D.call(this)
+	this.iep = function() {
+		let tempoTexte = ''
+		if (tempo){
+			tempoTexte = `tempo="${tempo}"`
+		}
+		let vitesseTexte = ''
+		if (vitesse){
+			vitesseTexte = `vitesse="${vitesse}"`
+		}
+		return `<action objet="${objet}" mouvement="translation" abscisse="${A.xIEP()}" ordonnee="${A.yIEP()}" ${tempoTexte} ${vitesseTexte} />`
+	} 
+}
+function deplacerCrayon(A,tempo,vitesse) {
+	return new Deplacer('crayon',A,tempo,vitesse)
+}
+function deplacerRegle(A,tempo,vitesse) {
+	return new Deplacer('regle',A,tempo,vitesse)
+}
+function deplacerEquerre(A,tempo,vitesse) {
+	return new Deplacer('equerre',A,tempo,vitesse)
+}
+function deplacerCompas(A,tempo,vitesse) {
+	return new Deplacer('compas',A,tempo,vitesse)
+}
+function deplacerRapporteur(A,tempo,vitesse) {
+	return new Deplacer('rapporteur',A,tempo,vitesse)
+}
+
+/**
+* rotationRegle(A,tempo,vitesse) | rotationCrayon(A,tempo,vitesse) | rotationEquerre(A,tempo,vitesse) | rotationCompas(A,tempo,vitesse) | rotationRapporteur(A,tempo,vitesse)
+* Pour IEP un angle positif est indirect
+* @Auteur Rémi Angot
+*/
+
+function Rotation(objet,angle,tempo=tempoIEP ,sens=5) {
+	ObjetMathalea2D.call(this)
+	this.iep = function() {
+		let tempoTexte = ''
+		if (tempo){
+			tempoTexte = `tempo="${tempo}"`
+		}
+		let sensTexte = ''
+		if (sens){
+			sensTexte = `sens="${sens}"`
+		}
+		return `<action objet="${objet}" mouvement="rotation" angle="${-angle}" ${tempoTexte} ${sensTexte} />`
+	} 
+}
+function rotationCrayon(angle,tempo,sens) {
+	return new Rotation('crayon',angle,tempo,sens)
+}
+function rotationRegle(angle,tempo,sens) {
+	return new Rotation('regle',angle,tempo,sens)
+}
+function rotationEquerre(angle,tempo,sens) {
+	return new Rotation('equerre',angle,tempo,sens)
+}
+function rotationCompas(angle,tempo,sens) {
+	return new Rotation('compas',angle,tempo,sens)
+}
+function rotationRapporteur(angle,tempo,sens) {
+	return new Rotation('rapporteur',angle,tempo,sens)
+}
+
+/**
+* rotationRegle(A,tempo,vitesse) | rotationCrayon(A,tempo,vitesse) | rotationEquerre(A,tempo,vitesse) | rotationCompas(A,tempo,vitesse) | rotationRapporteur(A,tempo,vitesse)
+* Pour IEP un angle positif est indirect
+* @Auteur Rémi Angot
+*/
+
+function Tracer(B,tempo=tempoIEP ,vitesse=10,epaisseur=0,couleur=0) {
+	ObjetMathalea2D.call(this)
+	this.iep = function() {
+		let tempoTexte = ''
+		if (tempo){
+			tempoTexte = `tempo="${tempo}"`
+		}
+		let vitesseTexte = ''
+		if (vitesse){
+			vitesseTexte = `vitesse="${vitesse}"`
+		}
+		idIEP +=1
+		return `<action abscisse="${B.xIEP()}" ordonnee="${B.yIEP()}" epaisseur="${epaisseur}" couleur="${couleur}" mouvement="tracer" objet="crayon" id="${idIEP}" />`
+	} 
+}
+function tracer(...args){
+	return new Tracer(...args)
+}
+
+
+/*
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% LES FONCTIONS - FORMATAGE %%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 */
@@ -2893,8 +3110,8 @@ function codeTikz(...objets){
 */
 function codeIep(...objets){
 	let code = ''
-	code = `<?xml version="1.0" encoding="UTF-8"?>
-<INSTRUMENPOCHE version="2">`
+	code = `<?xml version="1.0" encoding="UTF-8"?>\n
+<INSTRUMENPOCHE version="2">\n`
 	for (let objet of objets){
 		if (Array.isArray(objet)) {
 			for (let i = 0; i < objet.length; i++) {
@@ -2915,7 +3132,7 @@ function codeIep(...objets){
 
 		}
 	}
-	code += `</INSTRUMENPOCHE>`
+	code += `\n</INSTRUMENPOCHE>`
 	return code;
 }
 
