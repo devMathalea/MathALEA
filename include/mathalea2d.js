@@ -86,6 +86,12 @@ function Point(arg1,arg2,arg3,positionLabel = 'above') {
 	this.ySVG = function() {
 		return -this.y*this.coeff;
 	}
+	this.xIEP = function() {
+		return this.x*30+100;
+	}
+	this.yIEP = function() {
+		return -this.y*30+300;
+	}
 	if (!this.nom) {
 		this.nom = ' '; // Le nom d'un point est par défaut un espace
 		// On pourra chercher tous les objets qui ont ce nom pour les nommer automatiquement
@@ -888,6 +894,17 @@ function Segment(arg1,arg2,arg3,arg4,color){
 			optionsDraw = "["+tableauOptions.join(',')+"]"
 		}
 		return `\\draw${optionsDraw} (${this.x1},${this.y1})--(${this.x2},${this.y2});`
+	}
+	this.iep = function(){
+		let A = point(this.x1,this.y1)
+		let B = point(this.x2,this.y2)
+		let codeIep = ''
+		codeIep += `<action mouvement="montrer" objet="crayon" />`
+		codeIep += `\n<action abscisse="${A.xIEP()}" ordonnee="${A.yIEP()}" mouvement="translation" objet="crayon" />`
+		codeIep += `\n<action mouvement="montrer" objet="regle" />`
+		codeIep += `\n<action abscisse="${A.xIEP()}" ordonnee="${A.yIEP()}" mouvement="translation" objet="regle" />`
+		codeIep += `\n<action abscisse="${B.xIEP()}" ordonnee="${B.yIEP()}" epaisseur="0" couleur="0" id="1" mouvement="tracer" objet="crayon" />`
+		return codeIep
 	}
 }
 function segment(...args){
@@ -2865,6 +2882,40 @@ function codeTikz(...objets){
 		}
 	}
 	code += `\\end{tikzpicture}\n`
+	return code;
+}
+
+
+/**
+* codeTikz(segment(A,B),polygone(D,E,F),labelPoints(A,B))
+*
+* @Auteur Rémi Angot
+*/
+function codeIep(...objets){
+	let code = ''
+	code = `<?xml version="1.0" encoding="UTF-8"?>
+<INSTRUMENPOCHE version="2">`
+	for (let objet of objets){
+		if (Array.isArray(objet)) {
+			for (let i = 0; i < objet.length; i++) {
+				try {
+					if (objet[i].isVisible) {
+						code += '\t' + objet[i].iep() + '\n'
+					}
+				} catch (error){
+
+				}
+			}
+		}
+		try {
+			if (objet[i].isVisible) {
+				code += '\t' + objet.iep() + '\n'
+			}
+		} catch (error) {
+
+		}
+	}
+	code += `</INSTRUMENPOCHE>`
 	return code;
 }
 
