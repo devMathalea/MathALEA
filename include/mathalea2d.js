@@ -95,8 +95,33 @@ function Point(arg1,arg2,arg3,positionLabel = 'above') {
 	this.yIEP = function() {
 		return (-this.y+10)*30;
 	}
+	this.estAuDessusDroite = function(d){
+		if (d.b==0) { // droite verticale
+			return 'verticale'
+		} else {
+			if (-(d.a*this.x+d.c)/d.b<this.y) {
+				return true
+			}
+			if (-(d.a*this.x+d.c)/d.b>this.y) {
+				return false
+			}
+			if (d.a*this.x+d.b*this.y+d.c==0) {
+				return 'sur'
+			}
+		}
+			
+
+	}
+	this.estSurDroite = function(d){
+		if (d.a*this.x+d.b*this.y+d.c==0) {
+			return true
+		} else {
+			return false
+		}
+
+	}
 	if (!this.nom) {
-		this.nom = ' '; // Le nom d'un point est par défaut un espace
+		this.nom = ''; // Le nom d'un point est par défaut un espace
 		// On pourra chercher tous les objets qui ont ce nom pour les nommer automatiquement
 	}
 
@@ -127,6 +152,14 @@ function TracePoint(A,color='black',taille=0.3,){
 			return `\\node[point] at (${A.x},${A.y}) {};`
 		} else {
 			return `\\node[point,${color}] at (${A.x},${A.y}) {};`
+		}
+	}
+	this.iep = function(){
+		if (A.nom.length>0) {
+			return `<action ordonnee="${A.yIEP()}" abscisse="${A.xIEP()}" couleur="0" id="${A.nom}" mouvement="creer" objet="point" />`
+		} else {
+			idIEP +=1
+			return `<action ordonnee="${A.yIEP()}" abscisse="${A.xIEP()}" couleur="0" id="${idIEP}" mouvement="creer" objet="point" />`
 		}
 	}
 }
@@ -906,8 +939,16 @@ function Segment(arg1,arg2,arg3,arg4,color){
 		etapes.push(montrerRegle(A))
 		if (B.x>A.x) {
 			etapes.push(rotationRegle(droite(A,B).angleAvecHorizontale))
-		} else {
+		} 
+		if (B.x<A.x) {
 			etapes.push(rotationRegle(180+droite(A,B).angleAvecHorizontale))
+		}
+		if (B.x == A.x) { //segment vertical
+			if(A.y>B.y) { //A point du haut
+				etapes.push(rotationRegle(-90))
+			} else {
+				etapes.push(rotationRegle(90))
+			}
 		}
 		etapes.push(tracer(B))
 		etapes.push(masquerRegle())
@@ -1851,7 +1892,7 @@ function homothetie(A,O,k,nom,positionLabel){
 * N = projectionOrtho(M,d,'N','below left')
 *@Auteur Jean-Claude Lhote
 */
-function projectionOrtho(M,d,nom = ' ',positionLabel = 'above') {
+function projectionOrtho(M,d,nom = '',positionLabel = 'above') {
 	let a=d.a,b=d.b,c=d.c,k=calcul(1/(a*a+b*b));
 	let x,y;
 	if (a==0) {
@@ -1872,7 +1913,7 @@ function projectionOrtho(M,d,nom = ' ',positionLabel = 'above') {
  * N = affiniteOrtho(M,d,rapport,'N','rgiht')
  * @Auteur = Jean-Claude Lhote
  */
- function affiniteOrtho(A, d, k, nom = ' ', positionLabel = 'above') {
+ function affiniteOrtho(A, d, k, nom = '', positionLabel = 'above') {
  	if (A.constructor == Point) {
  		let a = d.a, b = d.b, c = d.c, q = calcul(1 / (a * a + b * b));
  		let x, y;
@@ -1928,7 +1969,7 @@ function projectionOrtho(M,d,nom = ' ',positionLabel = 'above') {
  * M = similitude(B,O,30,0.7,'M') // Le point M est l'image de B dans la similitude de centre O d'angle 30° et de rapport 0.7
  * @Auteur Jean-Claude Lhote
  */
- function similitude(A,O,a,k,nom=' ',positionLabel = 'above') {
+ function similitude(A,O,a,k,nom='',positionLabel = 'above') {
  	if (A.constructor==Point) {
  		let ra = Math.radians(a)
  		let x = calcul(O.x+k*(Math.cos(ra)*(A.x-O.x)-Math.sin(ra)*(A.y-O.y)))
@@ -2992,12 +3033,11 @@ function rotationRapporteur(angle,tempo,sens) {
 }
 
 /**
-* rotationRegle(A,tempo,vitesse) | rotationCrayon(A,tempo,vitesse) | rotationEquerre(A,tempo,vitesse) | rotationCompas(A,tempo,vitesse) | rotationRapporteur(A,tempo,vitesse)
-* Pour IEP un angle positif est indirect
+* tracer(B,tempo=tempoIEP ,vitesse=10,epaisseur=0,couleur=0) // Trace le segment du point courant vers B
 * @Auteur Rémi Angot
 */
 
-function Tracer(B,tempo=tempoIEP ,vitesse=10,epaisseur=0,couleur=0) {
+function Tracer(B,tempo=tempoIEP ,vitesse=10,epaisseur=0,couleur=0,pointilles=false) {
 	ObjetMathalea2D.call(this)
 	this.iep = function() {
 		let tempoTexte = ''
@@ -3008,13 +3048,116 @@ function Tracer(B,tempo=tempoIEP ,vitesse=10,epaisseur=0,couleur=0) {
 		if (vitesse){
 			vitesseTexte = `vitesse="${vitesse}"`
 		}
+		let pointillesTexte = ''
+		if (pointilles) {
+			pointillesTexte = 'pointille="tiret"'
+		}
 		idIEP +=1
-		return `<action abscisse="${B.xIEP()}" ordonnee="${B.yIEP()}" epaisseur="${epaisseur}" couleur="${couleur}" mouvement="tracer" objet="crayon" id="${idIEP}" />`
+		return `<action abscisse="${B.xIEP()}" ordonnee="${B.yIEP()}" epaisseur="${epaisseur}" couleur="${couleur}" mouvement="tracer" objet="crayon"  ${pointillesTexte} id="${idIEP}" />`
 	} 
 }
 function tracer(...args){
 	return new Tracer(...args)
 }
+
+/**
+* IEPtracerPerpendiculaire(A,B,C,tempo=tempoIEP ,vitesse=10,epaisseur=0,couleur=0) // Trace la perpendiculaire à [AB] passant par C
+* @Auteur Rémi Angot
+*/
+
+function IEPTracerPerpendiculaire(A,B,C,tempo=tempoIEP ,vitesse=10,epaisseur=0,couleur=0) {
+	ObjetMathalea2D.call(this)
+	this.iep = function() {
+		let tempoTexte = ''
+		if (tempo){
+			tempoTexte = `tempo="${tempo}"`
+		}
+		let vitesseTexte = ''
+		if (vitesse){
+			vitesseTexte = `vitesse="${vitesse}"`
+		}
+		let c = projectionOrtho(C,droite(A,B))
+		let etapes = []
+		if (droite(A,B).b!==0) {
+			let G,D // point de gauche et point de droite
+			if (A.x<B.x) {
+				G = A
+				D = B
+			} else {
+				G = B
+				D = A
+			}
+			if (c.x<G.x) { // Si le projeté ortho est à gauche de G
+				etapes.push(montrerRegle(G))
+				etapes.push(rotationRegle(droite(A,B).angleAvecHorizontale))
+				let c2 = pointSurSegment(G,c,longueur(G,c)+2)
+				etape.push(deplacerRegle(c2))
+			}
+			if (c.x>D.x) { // Si le projeté ortho est à droite de D
+				etapes.push(montrerRegle(G))
+				etapes.push(rotationRegle(droite(A,B).angleAvecHorizontale))
+				let c2 = pointSurSegment(G,D,longueur(A,B)-1)
+				etapes.push(deplacerRegle(c2))
+			}
+			etapes.push(montrerEquerre(B))
+			if (C.estAuDessusDroite(droite(A,B))) {
+				etapes.push(rotationEquerre(droite(A,B).angleAvecHorizontale))
+			} else {
+				etapes.push(rotationEquerre(droite(A,B).angleAvecHorizontale+180))
+			}
+			etapes.push(deplacerEquerre(c))
+			if (c.x<G.x || c.x>D.x) {
+				etapes.push(masquerRegle())
+			}
+		} else { // droite verticale
+			etapes.push(montrerEquerre(B))
+			if (C.x<A.x) { // point à gauche
+				etapes.push(rotationEquerre(90))
+			} else {
+				etapes.push(rotationEquerre(-90))
+			}
+			let Haut, Bas
+			if (A.y>B.y) {
+				Haut = A
+				Bas = B
+			} else {
+				Haut = B
+				Bas = A
+			}
+			if (C.y>Haut.y) { // Si le point est trop haut
+				etapes.push(montrerRegle(Bas))
+				let c2 = pointSurSegment(Bas,Haut,longueur(Bas,Haut)-1)
+				etapes.push(deplacerRegle(c2))
+				let Haut2 = pointSurSegment(Haut,c,longueur(Haut,c)+2)
+				etapes.push(deplacerCrayon(Haut))
+				etapes.push(tracer(Haut2,10,10,0,0,true))   
+			} 
+			if (C.y<Bas.y) {
+				etapes.push(montrerRegle(Bas))
+				let c2 = pointSurSegment(Bas,Haut,-7)
+				etapes.push(deplacerRegle(c2))
+			}
+			etapes.push(deplacerEquerre(c))
+			etapes.push(deplacerCrayon(c))
+			if (C.y>Haut.y || C.y<Bas.y) {
+				etapes.push(masquerRegle())
+			}
+		}
+			
+		etapes.push(tracer(C))
+		etapes.push(masquerEquerre())
+		codeIep = ''
+		for (etape of etapes){
+			code += etape.iep()
+		}
+		return codeIep
+	} 
+}
+function IEPtracerPerpendiculaire(...args){
+	return new IEPTracerPerpendiculaire(...args)
+}
+
+
 
 
 /*
