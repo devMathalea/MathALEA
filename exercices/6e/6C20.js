@@ -14,7 +14,7 @@ import { liste_de_question_to_contenu, randint, combinaison_listes, calcul, tex_
  * @Auteur Rémi Angot
  * Référence 6C20
  */
-export default function Additionner_soustraires_decimaux() {
+export default function Additionner_soustraires_nombre_decimaux() {
   Exercice.call(this); // Héritage de la classe Exercice()
   this.titre = "Additions et soustractions de nombres décimaux";
   this.consigne = "Poser et effectuer les calculs suivants.";
