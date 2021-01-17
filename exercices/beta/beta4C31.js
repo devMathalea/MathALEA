@@ -16,7 +16,7 @@ import {ObjetMathalea2D,Point,point,TracePoint,tracePoint,TracePointSurDroite,tr
  * date : 15/11/2020
  * 4C30-4
  */
-export default function Comparer_puissance10() {
+export default function Comparer_des_puissance10() {
   Exercice.call(this); // Héritage de la classe Exercice()
   this.sup = 1; // Avec ou sans relatifs
   this.titre = "Puissances de 10";
